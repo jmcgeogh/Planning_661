@@ -5,25 +5,33 @@ Created on Mon Feb 15 14:04:59 2021
 
 @author: elliottmcg
 """
-
-import numpy as np
 import time
-import copy
 
-start_time = time.time()
+# Track the amount of time the code is running
+start_time = time.time() 
+# The 5 states that where provided to test the code
 initial_state1 = [[1, 2, 3, 4],[ 5, 6,0, 8], [9, 10, 7, 12] , [13, 14, 11, 15]]
 initial_state2 = [[1, 0, 3, 4],[ 5, 2, 7, 8], [9, 6, 10, 11] , [13, 14, 15, 12]]
 initial_state3 = [[0, 2, 3, 4],[ 1,5, 7, 8], [9, 6, 11, 12] , [13, 10, 14, 15]]
 initial_state4 = [[5, 1, 2, 3],[0,6, 7, 4], [9, 10, 11, 8] , [13, 14, 15, 12]]
 initial_state5 = [[1, 6, 2, 3], [9,5, 7, 4], [0, 10, 11, 8] , [13, 14, 15, 12]]
+# Select the initial stat you want to test
 initial_state = initial_state3
+# The end goal of the program
 end_state = '010203040506070809101112131415__'
+# Set the current value as our initial state
 current = initial_state
-storage = [] # store new configs
-tree = {} # dict for bfs
-state = 1 # lable for new config
-count = 0 # current dict {key}
+# Store new configs
+storage = []
+# dict for bfs 
+tree = {} 
+# current dict {value}
+state = 1 
+# current dict {key}
+count = 0 
+# Which initial state was selected
 state_num = ''
+# Function to convert state from list to string 
 
 def convert(node):
     string = ''
@@ -40,8 +48,7 @@ def convert(node):
                     string = string + char
     return string
 
-storage.append(convert(current))
-
+# Function to find the location of the __ that indicates blank tile in string
 def blank_loc(string):
     for i in range(0, len(string), 2):
         num = string[i] + string[i+1]
@@ -49,111 +56,124 @@ def blank_loc(string):
             blank = [i, i+1]
     return blank
 
+# Function to check for duplicate configurations
 def dup(node):
     for i in range(len(storage)):
         if node == storage[i]:
-            return 0
+            return 0 
         else:
             return 1
-
+        
+# Function to move the blank tile to the left location
 def left(node, coords, state):
     i = coords[0]
     j = coords[1]
-    if i == 0 or i == 8 or i == 16 or i == 24:
-        return False
-    else:
+    if i == 0 or i == 8 or i == 16 or i == 24: # Check if movement is possible
+        return False 
+    else: # Swap the locations of the __ and left number
         lst = list(node)
         lst[i], lst[j] = lst[i-2], lst[j-2]
         lst[i-2], lst[j-2] = '_','_'
         left = ''.join(lst)
-        if dup(left) == 1:
-            storage.append(left)
+        if dup(left) == 1: # Check for duplicate before storage
+            storage.append(left) # Store configuration
             return True
         else:
-            return False
-
+            return False 
+        
+# Function to move the blank tile to the right location
 def right(node, coords, state):
     i = coords[0]
     j = coords[1]
-    if i == 6 or i == 14 or i == 22 or i == 30:
+    if i == 6 or i == 14 or i == 22 or i == 30: # Check if movement is possible
         return False
-    else:
+    else: # Swap the locations of the __ and right number
         lst = list(node)
         lst[i], lst[j] = lst[i+2], lst[j+2]
         lst[i+2], lst[j+2] = '_','_'
         right = ''.join(lst)
-        if dup(right) == 1:
-            storage.append(right)
+        if dup(right) == 1: # Check for duplicate before storage
+            storage.append(right) # Store configuration
             return True
         else:
             return False
-
+        
+# Function to move the blank tile to the down location
 def down(node, coords, state):
     i = coords[0]
     j = coords[1]
-    if i == 24 or i == 26 or i == 28 or i == 30:
+    if i == 24 or i == 26 or i == 28 or i == 30: # Check if movement is possible
         return False
-    else:
+    else: # Swap the locations of the __ and down number
         lst = list(node)
         lst[i], lst[j] = lst[i+8], lst[j+8]
         lst[i+8], lst[j+8] = '_','_'
         down = ''.join(lst)
-        if dup(down) == 1:
-            storage.append(down)
+        if dup(down) == 1: # Check for duplicate before storage
+            storage.append(down) # Store configuration
             return True
         else:
             return False
-
+        
+# Function to move the blank tile to the up location
 def up(node, coords, state):
     i = coords[0]
     j = coords[1]
-    if i == 0 or i == 2 or i == 4 or i == 6:
+    if i == 0 or i == 2 or i == 4 or i == 6: # Check if movement is possible
         return False
-    else:
+    else: # Swap the locations of the __ and up number
         lst = list(node)
         lst[i], lst[j] = lst[i-8], lst[j-8]
         lst[i-8], lst[j-8] = '_','_'
         up = ''.join(lst)
-        if dup(up) == 1:
-            storage.append(up)
+        if dup(up) == 1: # Check for duplicate before storage
+            storage.append(up) # Store configuration
             return True
         else:
             return False
+        
+# Store the initial state
+storage.append(convert(current)) 
+while True: # Continue to create and check configs until end condition is reached
 
-while True:
-    current = storage[count]
-    blank = blank_loc(current)
-    tree[count] = []
+    current = storage[count] # Make current the the stored value of index "count"
+    blank = blank_loc(current) # Find the __ of the current configuration
+    tree[count] = [] # Create a new {key} and {value} for the current config
     
-    if left(current, blank, state):
-        tree[count].append(state)
-        state += 1
-    if right(current, blank, state):
-        tree[count].append(state)
-        state += 1
-    if up(current, blank, state):
-        tree[count].append(state)
-        state += 1
-    if down(current, blank, state):
-        tree[count].append(state)
-        state += 1
+    # Check if current config is final config
     if current == end_state:
         print('Goal reached!')
         print('Tested', storage.index(current), 'states')
         print(len(storage) - storage.index(current), 'states still queued')
         break
-    
+    # Check if storage capacity has been reached
     if len(storage) == 1000000:
         print('Stack Capacity Reached. No solution')
         print(len(storage))
         break
-    
+    # Check if run time limit has been reached
     if (time.time() - start_time) == 3:
         print("Program ran for %s hours" % ((time.time() - start_time)/3600)) 
         break
-  
-    count += 1 #update count {key}
-
+    
+    # Send the current configuration through the 4 movement options
+    if left(current, blank, state):
+        tree[count].append(state) # Create new {value} for current {key}
+        state += 1 # Update {value} value
+    if right(current, blank, state):
+        tree[count].append(state) # Create new {value} for current {key}
+        state += 1 # Update {value} value
+    if up(current, blank, state):
+        tree[count].append(state) # Create new {value} for current {key}
+        state += 1 # Update {value} value
+    if down(current, blank, state):
+        tree[count].append(state) # Create new {value} for current {key}
+        state += 1 # Update {value} value
+        
+    # Update count to next stored configuration (bfs)
+    count += 1
+    
+# Find the initial state selected for testing
 if initial_state == initial_state1:
     state_num = '1'
 elif initial_state == initial_state2:
@@ -164,14 +184,16 @@ elif initial_state == initial_state4:
     state_num = '4'
 else:
     state_num = '5'
-
+    
+# Create text file of stored configurations 
 file1 = open("Project_1_661.txt","w")  
 file1.write("Stored Configurations of initial state " + state_num + ": \n") 
 for line in storage:
   file1.write(line)
   file1.write("\n")
 file1.close()
-  
+
+# Allow the user to check specific configs based on {key}{value} combinations
 print('Would you like to access configuration storage? (y/n)')
 if input() == 'y':
     print('Retriving Tree')
@@ -183,6 +205,5 @@ if input() == 'y':
     y = int(input())
     print('Parent', x, 'Child', y)
     print(storage[tree[x][tree[x].index(y)]])
-    
 else:
     print('Thank you')
