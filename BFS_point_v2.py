@@ -157,7 +157,7 @@ tree = {1: [sy_num,sx_num]}
 frames = np.array([])
 
 def get_frame(state, img):
-    path = '/home/elliottmcg/Desktop/School/Second Semester/Planning_661/frames/'
+    path = ''
     cv2.imwrite((path+f'frame{state}.jpg'), add_border(img))
     cv2.waitKey(1)
     return
@@ -181,7 +181,7 @@ def back_vis(coord_path, child):
 
 
 def visual(frames, path_len):
-    path = '/home/elliottmcg/Desktop/School/Second Semester/Planning_661/frames/'
+    path = ''
     img=[]
     for i in range(2,frames+1):
         img.append(cv2.imread(path+f'frame{i}.jpg'))
