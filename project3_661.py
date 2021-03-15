@@ -26,7 +26,7 @@ def create_blank(width, height, rgb_color=(0, 0, 0)):
 
 # Create new blank 400x300 black image
 width, height = 400, 300
-adjacency_matrix_graph = np.zeros((width,height))
+adjacency_matrix_graph = np.zeros((height,width))
 # Make image base black
 black = (0, 0, 0)
 im = create_blank(width, height, rgb_color=black)
@@ -239,7 +239,7 @@ def up(x,y,state, count, curr_cost):
         if b == 0 and g == 0 and r == 0:
             # Make the pixel white
             im[up,x] = [255,255,255]
-            adjacency_matrix_graph[x][up] = new_cost
+            adjacency_matrix_graph[up][x] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             # Update tree with next location to visit in the while loop
@@ -275,7 +275,7 @@ def up_right(x,y,state, count, curr_cost):
         b,g,r = (im[up,right])
         if b == 0 and g == 0 and r == 0:
             im[up,right] = [255,255,255]
-            adjacency_matrix_graph[right][up] = new_cost
+            adjacency_matrix_graph[up][right] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             tree[state] = [up,right]
@@ -300,7 +300,7 @@ def right(x,y,state, count, curr_cost):
         b,g,r = (im[y,right])
         if b == 0 and g == 0 and r == 0:
             im[y,right] = [255,255,255]
-            adjacency_matrix_graph[right][y] = new_cost
+            adjacency_matrix_graph[y][right] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             tree[state] = [y,right]
@@ -326,7 +326,7 @@ def down_right(x,y,state, count, curr_cost):
         b,g,r = (im[down,right])
         if b == 0 and g == 0 and r == 0:
             im[down,right] = [255,255,255]
-            adjacency_matrix_graph[right][down] = new_cost
+            adjacency_matrix_graph[down][right] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             tree[state] = [down,right]
@@ -351,7 +351,7 @@ def down(x,y,state, count, curr_cost):
         b,g,r = (im[down,x])
         if b == 0 and g == 0 and r == 0:
             im[down,x] = [255,255,255]
-            adjacency_matrix_graph[x][down] = new_cost
+            adjacency_matrix_graph[down][x] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             tree[state] = [down,x]
@@ -377,7 +377,7 @@ def down_left(x,y,state, count, curr_cost):
         b,g,r = (im[down,left])
         if b == 0 and g == 0 and r == 0:
             im[down,left] = [255,255,255]
-            adjacency_matrix_graph[left][down] = new_cost
+            adjacency_matrix_graph[down][left] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             tree[state] = [down,left]
@@ -403,7 +403,7 @@ def left(x,y,state, count, curr_cost):
         b,g,r = (im[y,left])
         if b == 0 and g == 0 and r == 0:
             im[y,left] = [255,255,255]
-            adjacency_matrix_graph[left][y] = new_cost
+            adjacency_matrix_graph[y][left] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             tree[state] = [y,left]
@@ -429,7 +429,7 @@ def up_left(x,y,state, count, curr_cost):
         b,g,r = (im[up,left])
         if b == 0 and g == 0 and r == 0:
             im[up,left] = [255,255,255]
-            adjacency_matrix_graph[left][up] = new_cost
+            adjacency_matrix_graph[up][left] = new_cost
             if int(vis) == 1:
                 get_frame(state, im)
             tree[state] = [up,left]
@@ -452,11 +452,21 @@ state = 2
 # initialize the track dictionary to log parent and child relationships
 track = {1: []}
 # iterate until goal is found
+diks_x = 0
+diks_y = 0
+backup = []
 while True:
     # Get the starting position
-    current_x = tree[count][1]
-    current_y = tree[count][0]
-    current_cost = adjacency_matrix_graph[current_x][current_y]
+    next_node = []
+    checked = []
+    if count == 1:
+        current_x = tree[count][1]
+        current_y = tree[count][0]
+    else:
+        current_x = diks_x
+        current_y = diks_y
+        
+    current_cost = adjacency_matrix_graph[current_y][current_x]
     # Check color of current pixel
     b,g,r = (im[current_y,current_x])
     # If the color is red then it is the goal pixel
@@ -479,14 +489,44 @@ while True:
     state = up_left(current_x, current_y, state, count, current_cost)
     
     # Scale the output image to your liking
-    # imS = cv2.resize(add_border(im), (width*Illistration_scale, height*Illistration_scale))
-    # cv2.imshow("Building", imS)
-    # cv2.waitKey(1)
+    imS = cv2.resize(add_border(im), (width*Illistration_scale, height*Illistration_scale))
+    cv2.imshow("Building", imS)
+    cv2.waitKey(1)
+    # print(adjacency_matrix_graph[:10, :10])
+    # print(tree)
+    # print(track)
+    for childs in track[count]:
+        # print(tree[childs])
+        coords = tree[childs]
+        checked.append(coords)
+        next_node.append(adjacency_matrix_graph[coords[0]][coords[1]])
+        
+    
     count += 1
-    if count == 20:
+    print(next_node)
+    if next_node != []:
+        lowest_cost = min(next_node)
+        # print(lowest_cost)
+        # print(next_node.index(lowest_cost))
+        # print(checked)
+        found_node = next_node.index(lowest_cost)
+        print(checked[found_node])
+        diks_next = checked[found_node]
+        diks_x = diks_next[1]
+        diks_y = diks_next[0]
+        next_node.pop(found_node)
+        lowest_cost2 = min(next_node)
+        found_node2 = next_node.index(lowest_cost2) + 1
+        backup.append(checked[found_node2])
+    else:
+        reserve = backup[-1]
+        diks_x = reserve[1]
+        diks_y = reserve[0]
+    
+    if count == 10:
         break
 
-print(adjacency_matrix_graph[:6, :6])
+print(adjacency_matrix_graph)
 cv2.destroyAllWindows()
 imS = cv2.resize(add_border(im), (width*Final_scale, height*Final_scale))
 cv2.imshow("Finished", imS)
