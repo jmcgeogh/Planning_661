@@ -33,62 +33,17 @@ im = create_blank(width, height, rgb_color=black)
 row, col = im.shape[:2]
 bottom = im[row-2:row, 0:col]
 mean = cv2.mean(bottom)[0]
-# Create copies of the image so drawing functions can run properly
-obj1 = im.copy()
-obj2 = im.copy()
-obj3 = im.copy()
-obj4 = im.copy()
-obj5 = im.copy()
 
 # Get points on drawn lines
-def get_points(line):
-    points = []
-    for x in range(col):
-        for y in range(row):
-            b,g,r = line[y][x]
-            if b == 255:
-                points.append([x,y])
-    return points
+# def get_points(line):
+#     points = []
+#     for x in range(col):
+#         for y in range(row):
+#             b,g,r = line[y][x]
+#             if b == 255:
+#                 points.append([x,y])
+#     return points
 
-# # Draw angled rectangular objects
-# def draw_angled_rec(pt0, pt1, pt2, pt3, img):
-#     # Use OpenCV to draw lines
-#     left = cv2.line(img, pt0, pt1, (255, 0, 0), 1)
-#     cv2.line(img, pt1, pt2, (255, 0, 0), 1)
-#     right = cv2.line(img, pt2, pt3, (255, 0, 0), 1)
-#     cv2.line(img, pt3, pt0, (255, 0, 0), 1)
-#     # Use OpenCV to fill in space between lines
-#     left_points = np.array(get_points(left))
-#     right_points = np.array(get_points(right))
-#     right_points = np.flipud(right_points)
-#     points = np.concatenate((left_points,right_points))
-#     cv2.fillPoly(img, [points], color=[255,0,0])
-    
-# def buff(pt0, pt1, pt2, pt3, img):
-#     # Use OpenCV to draw lines
-#     left = cv2.line(img, pt0, pt1, (255, 255, 255), 1)
-#     cv2.line(img, pt1, pt2, (255, 255, 255), 1)
-#     right = cv2.line(img, pt2, pt3, (255, 255, 255), 1)
-#     cv2.line(img, pt3, pt0, (255, 255, 255), 1)
-#     # Use OpenCV to fill in space between lines
-#     left_points = np.array(get_points(left))
-#     right_points = np.array(get_points(right))
-#     right_points = np.flipud(right_points)
-#     points = np.concatenate((left_points,right_points))
-#     cv2.fillPoly(img, [points], color=[255,255,255])
-    
-        
-
-# # Call Drawing functions with defined endpoints
-# draw_angled_rec((48,192), (37,176), (159,90), (171,106), obj1)
-# buff((48,197), (32,176), (37,176), (48,192), obj2)    
-# buff((32,176), (159,85), (159,90), (37,176), obj3)
-# buff((159,85), (176,106), (171,106), (159,90), obj4)
-# buff((176,106), (48,197), (48,192), (171,106), obj5)
-        
-
-# Merge the images to one image
-im = obj2+obj1+obj3+obj4+obj5
 # USe half-plane method to draw simgple objetcs
 for y in range(row):
     for x in range(col):
@@ -212,10 +167,10 @@ def MoveStraight(x,y,cost,theta):
     x_step = round(x_step * 2) / 2
     y_step = round(y_step * 2) / 2
     x += int(x_step*2)
-    y += int(y_step*2)
-    if x >= 0 and y >= 0 and x < row and y < col:
+    y -= int(y_step*2)
+    if x >= 0 and y >= 0 and x < col and y < row:
         b, g, r = im[y][x]
-        if b == 0 and g == 0 and r == 0: 
+        if (b == 0 and g == 0 and r == 0) or (b == 0 and g == 255 and r == 0): 
             Euc = math.sqrt((ex_num - x)**2 + (ey_num - y)**2)
             cost += d + Euc
             cost_matrix[y][x] = cost
@@ -243,9 +198,9 @@ def MoveUp30(x,y,cost,theta):
     y_step = round(y_step * 2) / 2
     x += int(x_step*2)
     y -= int(y_step*2)
-    if x >= 0 and y >= 0 and x < row and y < col:
+    if x >= 0 and y >= 0 and x < col and y < row:
         b, g, r = im[y][x]
-        if b == 0 and g == 0 and r == 0: 
+        if (b == 0 and g == 0 and r == 0) or (b == 0 and g == 255 and r == 0):
             Euc = math.sqrt((ex_num - x)**2 + (ey_num - y)**2)
             cost += d + Euc
             cost_matrix[y][x] = cost
@@ -273,9 +228,9 @@ def MoveUp60(x,y,cost,theta):
     y_step = round(y_step * 2) / 2
     x += int(x_step*2)
     y -= int(y_step*2)
-    if x >= 0 and y >= 0 and x < row and y < col:
+    if x >= 0 and y >= 0 and x < col and y < row:
         b, g, r = im[y][x]
-        if b == 0 and g == 0 and r == 0: 
+        if (b == 0 and g == 0 and r == 0) or (b == 0 and g == 255 and r == 0):
             Euc = math.sqrt((ex_num - x)**2 + (ey_num - y)**2)
             cost += d + Euc
             cost_matrix[y][x] = cost
@@ -304,9 +259,9 @@ def MoveDown30(x,y,cost,theta):
     y_step = round(y_step * 2) / 2
     x += int(x_step*2)
     y -= int(y_step*2)
-    if x >= 0 and y >= 0 and x < row and y < col:
+    if x >= 0 and y >= 0 and x < col and y < row:
         b, g, r = im[y][x]
-        if b == 0 and g == 0 and r == 0: 
+        if (b == 0 and g == 0 and r == 0) or (b == 0 and g == 255 and r == 0):
             Euc = math.sqrt((ex_num - x)**2 + (ey_num - y)**2)
             cost += d + Euc
             cost_matrix[y][x] = cost
@@ -328,16 +283,15 @@ def MoveDown60(x,y,cost,theta):
         y += d
     if rad == (1.5*math.pi):
         y -= d
-    print(rad)
     y_step = d*(math.sin(rad))
     x_step = d*(math.cos(rad))
     x_step = round(x_step * 2) / 2
     y_step = round(y_step * 2) / 2
     x += int(x_step*2)
     y -= int(y_step*2)
-    if x >= 0 and y >= 0 and x < row and y < col:
+    if x >= 0 and y >= 0 and x < col and y < row:
         b, g, r = im[y][x]
-        if b == 0 and g == 0 and r == 0: 
+        if (b == 0 and g == 0 and r == 0) or (b == 0 and g == 255 and r == 0):
             Euc = math.sqrt((ex_num - x)**2 + (ey_num - y)**2)
             cost += d + Euc
             cost_matrix[y][x] = cost
@@ -349,6 +303,10 @@ def MoveDown60(x,y,cost,theta):
         return None, None, None, None
 
 visited = []
+secondary_x = []
+secondary_y = []
+secondary_cost = []
+secondary_theta = []
 def move(x,y,cost,theta):
     visited.append([x,y])
     print('current xy', im[y][x])
@@ -368,35 +326,73 @@ def move(x,y,cost,theta):
     select_theta = [ x for x in select_theta if type(x) == int ]
     
     for i in range(len(select_costs)):
-        cv2.arrowedLine(im, (y,x), (select_y[i],select_x[i]), (0,255,0))
+        cv2.arrowedLine(im, (x,y), (select_x[i],select_y[i]), (0,255,0))
             
     print('s cost', select_costs)
     print('s x', select_x)
     print('s y', select_y)
     print('s theta', select_theta)
-    
-    cost_index = select_costs.index(min(select_costs))
-    new_cost = select_costs[cost_index]
-    new_x = select_x[cost_index]
-    new_y = select_y[cost_index]
-    new_theta = select_theta[cost_index]
-    for i in visited:
-        if new_x == i[0] and new_y == i[1]:
-            select_costs.pop(cost_index)
-            select_x.pop(cost_index)
-            select_y.pop(cost_index)
-            select_theta.pop(cost_index)
-            
+    if select_costs != []:
+        cost_index = select_costs.index(min(select_costs))
+        new_cost = select_costs.pop(cost_index)
+        new_x = select_x.pop(cost_index)
+        new_y = select_y.pop(cost_index)
+        new_theta = select_theta.pop(cost_index)
+        
+        for i in visited:
+            if new_x == i[0] and new_y == i[1]:
+                cost_index = select_costs.index(min(select_costs))
+                new_cost = select_costs.pop(cost_index)
+                new_x = select_x.pop(cost_index)
+                new_y = select_y.pop(cost_index)
+                new_theta = select_theta.pop(cost_index)
+                
+        if select_costs != []:
             cost_index = select_costs.index(min(select_costs))
-            new_cost = select_costs[cost_index]
-            new_x = select_x[cost_index]
-            new_y = select_y[cost_index]
-            new_theta = select_theta[cost_index]
+            second_cost = select_costs.pop(cost_index)
+            second_x = select_x.pop(cost_index)
+            second_y = select_y.pop(cost_index)
+            second_theta = select_theta.pop(cost_index)
+            
+            for i in visited:
+                if second_x == i[0] and second_y == i[1]:
+                    if select_costs != []:
+                        cost_index = select_costs.index(min(select_costs))
+                        second_cost = select_costs.pop(cost_index)
+                        second_x = select_x.pop(cost_index)
+                        second_y = select_y.pop(cost_index)
+                        second_theta = select_theta.pop(cost_index)
+                        
+                        secondary_cost.append(second_cost)
+                        secondary_x.append(second_x)
+                        secondary_y.append(second_y)
+                        secondary_theta.append(second_theta)
+                        
+                    else:
+                        new_cost = secondary_cost[-1]
+                        new_x = secondary_x[-1]
+                        new_y = secondary_y[-1]
+                        new_theta = secondary_theta[-1]
+                else:
+                    secondary_cost.append(second_cost)
+                    secondary_x.append(second_x)
+                    secondary_y.append(second_y)
+                    secondary_theta.append(second_theta)
+    else:   
+        new_cost = secondary_cost[-1]
+        new_x = secondary_x[-1]
+        new_y = secondary_y[-1]
+        new_theta = secondary_theta[-1]
             
     print('new cost', new_cost)
     print('new x', new_x)
     print('new y', new_y)
     print('new theta', new_theta)
+    print('second cost', secondary_cost[-1])
+    print('second x', secondary_x[-1])
+    print('second y', secondary_y[-1])
+    print('second theta', secondary_theta[-1])
+    visited.append([new_x, new_y])
     
     return new_x, new_y, new_cost, new_theta
     
@@ -407,18 +403,30 @@ def goal(current_x, current_y):
     else:
         return False
 
+def backtrack(visited):
+    for i in visited:
+        im[i[1]][i[0]] = (0,0,255)
+    
+    pts = np.array(visited)
+     
+    cv2.polylines(im, [pts], False, (0,0,255), 2)
+    return
+
 current_x = sx_num
 current_y = sy_num
-cost = cost_matrix[sx_num][sy_num]
+cost = cost_matrix[sy_num][sx_num]
 current_theta = 0
 count = 0
 while True:
     if goal(current_x, current_y) == True:
+        backtrack(visited)
         break
+    
+    current_x, current_y, cost, current_theta = move(current_x, current_y, cost, current_theta)
+    
     imS = cv2.resize(add_border(im), (width*Final_scale, height*Final_scale))
     cv2.imshow("Finished", imS)
     cv2.waitKey(0)
-    current_x, current_y, cost, current_theta = move(current_x, current_y, cost, current_theta)
     # if count == 2:
     #     break
     # count += 1
