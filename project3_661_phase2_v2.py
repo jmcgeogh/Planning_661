@@ -49,6 +49,10 @@ for y in range(row):
     for x in range(col):
         if x>=195 and x<= 235 and y>=15 and y<=35:
             im[y][x] = [255, 255, 255]
+        if x <= 4 or x >= 396:
+            im[y][x] = [255, 255, 255]
+        if y <= 4 or y >= 296:
+            im[y][x] = [255, 255, 255]
         if x>=200 and x<= 230 and y>=20 and y<=30:
             im[y][x] = [255, 0, 0]
         if x>=195 and x<= 215 and y>30 and y<=60:
@@ -99,7 +103,7 @@ def add_border(image):
         )
     return border
 
-# cv2.imshow('map', im)
+# cv2.imshow('map', add_border(im))
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 # sys.exit()
@@ -113,8 +117,8 @@ def add_border(image):
 d = input('Please select step (1-10): ')
 d = int(d)
 # Ask user for starting point
-sx = input(f'Please select starting x coordinate in range 0 to {col-1}: ')
-sy = input(f'Please select starting y coordinate in range 0 to {row-1}: ')
+sx = input(f'Please select starting x coordinate in range 5 to {col-5}: ')
+sy = input(f'Please select starting y coordinate in range 5 to {row-5}: ')
 sx_num = int(sx)
 sy_num = int(sy)
 # Make sure starting point is not in an object
@@ -130,8 +134,8 @@ while True:
     else: 
         break
 # Ask user for ending point
-ex = input(f'Please select ending x coordinate in range 0 to {col-1}: ')
-ey = input(f'Please select ending y coordinate in range 0 to {row-1}: ')
+ex = input(f'Please select ending x coordinate in range 5 to {col-5}: ')
+ey = input(f'Please select ending y coordinate in range 5 to {row-5}: ')
 ex_num = int(ex)
 ey_num = int(ey)
 # Make sure ending point is not in an object
@@ -307,9 +311,10 @@ secondary_x = []
 secondary_y = []
 secondary_cost = []
 secondary_theta = []
-def move(x,y,cost,theta):
-    visited.append([x,y])
-    print('current xy', im[y][x])
+
+path = []
+def move(x,y,cost,theta, it):
+
     sx, sy, s_cost, theta_s = MoveStraight(x, y, cost, theta)
     u30_x, u30_y, u30_cost, theta_u30 = MoveUp30(x, y, cost, theta)
     u60_x, u60_y, u60_cost, theta_u60 = MoveUp60(x, y, cost, theta)
@@ -339,14 +344,28 @@ def move(x,y,cost,theta):
         new_y = select_y.pop(cost_index)
         new_theta = select_theta.pop(cost_index)
         
-        for i in visited:
-            if new_x == i[0] and new_y == i[1]:
-                cost_index = select_costs.index(min(select_costs))
-                new_cost = select_costs.pop(cost_index)
-                new_x = select_x.pop(cost_index)
-                new_y = select_y.pop(cost_index)
-                new_theta = select_theta.pop(cost_index)
-                
+        n = 1
+        while n != 0:
+            n = 0
+            for i in visited:
+                if new_x == i[0] and new_y == i[1]:
+                    if select_costs != []:
+                        cost_index = select_costs.index(min(select_costs))
+                        new_cost = select_costs.pop(cost_index)
+                        new_x = select_x.pop(cost_index)
+                        new_y = select_y.pop(cost_index)
+                        new_theta = select_theta.pop(cost_index)
+                        n = 1
+                    else: 
+                        del path[-1]
+                        new_cost = secondary_cost[-1]
+                        new_x = secondary_x[-1]
+                        new_y = secondary_y[-1]
+                        new_theta = secondary_theta[-1]
+                        break
+        
+        path.append([new_x, new_y])
+        
         if select_costs != []:
             cost_index = select_costs.index(min(select_costs))
             second_cost = select_costs.pop(cost_index)
@@ -354,36 +373,52 @@ def move(x,y,cost,theta):
             second_y = select_y.pop(cost_index)
             second_theta = select_theta.pop(cost_index)
             
-            for i in visited:
-                if second_x == i[0] and second_y == i[1]:
-                    if select_costs != []:
-                        cost_index = select_costs.index(min(select_costs))
-                        second_cost = select_costs.pop(cost_index)
-                        second_x = select_x.pop(cost_index)
-                        second_y = select_y.pop(cost_index)
-                        second_theta = select_theta.pop(cost_index)
+            d = 1
+            while d != 0:
+                d = 0
+                for i in visited:
+                    if second_x == i[0] and second_y == i[1]:
+                        d = 1
+                        if select_costs != []:
+                            cost_index = select_costs.index(min(select_costs))
+                            second_cost = select_costs.pop(cost_index)
+                            second_x = select_x.pop(cost_index)
+                            second_y = select_y.pop(cost_index)
+                            second_theta = select_theta.pop(cost_index) 
+                        else:
+                            second_cost = None
+                            second_x = None
+                            second_y = None
+                            second_theta = None
+                            break
+        else:
+            second_cost = None
+            second_x = None
+            second_y = None
+            second_theta = None
                         
-                        secondary_cost.append(second_cost)
-                        secondary_x.append(second_x)
-                        secondary_y.append(second_y)
-                        secondary_theta.append(second_theta)
-                        
-                    else:
-                        new_cost = secondary_cost[-1]
-                        new_x = secondary_x[-1]
-                        new_y = secondary_y[-1]
-                        new_theta = secondary_theta[-1]
-                else:
-                    secondary_cost.append(second_cost)
-                    secondary_x.append(second_x)
-                    secondary_y.append(second_y)
-                    secondary_theta.append(second_theta)
     else:   
-        new_cost = secondary_cost[-1]
-        new_x = secondary_x[-1]
-        new_y = secondary_y[-1]
-        new_theta = secondary_theta[-1]
+        it += 1
+        new_cost = secondary_cost[-it]
+        new_x = secondary_x[-it]
+        new_y = secondary_y[-it]
+        new_theta = secondary_theta[-it]
+        del path[-1]
+        
+        path.append([new_x, new_y])
+        
+        second_cost = None
+        second_x = None
+        second_y = None
+        second_theta = None
             
+    visited.append([new_x, new_y])
+    if second_cost != None:
+        secondary_cost.append(second_cost)
+        secondary_x.append(second_x)
+        secondary_y.append(second_y)
+        secondary_theta.append(second_theta)
+        
     print('new cost', new_cost)
     print('new x', new_x)
     print('new y', new_y)
@@ -392,9 +427,8 @@ def move(x,y,cost,theta):
     print('second x', secondary_x[-1])
     print('second y', secondary_y[-1])
     print('second theta', secondary_theta[-1])
-    visited.append([new_x, new_y])
     
-    return new_x, new_y, new_cost, new_theta
+    return new_x, new_y, new_cost, new_theta, it
     
 def goal(current_x, current_y):
     if (ex_num-1.5) < current_x < (ex_num+1.5) and (ey_num-1.5) < current_y < (ey_num+1.5):
@@ -403,30 +437,36 @@ def goal(current_x, current_y):
     else:
         return False
 
-def backtrack(visited):
-    for i in visited:
+def backtrack(mark):
+    for i in mark:
         im[i[1]][i[0]] = (0,0,255)
     
-    pts = np.array(visited)
-     
+    pts = np.array(mark)
+    
     cv2.polylines(im, [pts], False, (0,0,255), 2)
     return
 
 current_x = sx_num
 current_y = sy_num
 cost = cost_matrix[sy_num][sx_num]
-current_theta = 0
+visited.append([current_x, current_y])
+path.append([current_x, current_y])
+if sx_num < ex_num:
+    current_theta = 0
+if sx_num > ex_num:
+    current_theta = 180
 count = 0
+it = 0
 while True:
     if goal(current_x, current_y) == True:
-        backtrack(visited)
+        backtrack(path)
         break
     
-    current_x, current_y, cost, current_theta = move(current_x, current_y, cost, current_theta)
+    current_x, current_y, cost, current_theta, it = move(current_x, current_y, cost, current_theta, it)
     
     imS = cv2.resize(add_border(im), (width*Final_scale, height*Final_scale))
     cv2.imshow("Finished", imS)
-    cv2.waitKey(0)
+    cv2.waitKey(1)
     # if count == 2:
     #     break
     # count += 1
