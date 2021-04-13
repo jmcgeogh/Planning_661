@@ -5,6 +5,7 @@ import math
 import sys
 import tf
 import copy
+import operator
 from geometry_msgs.msg import Twist, Point
 from sensor_msgs.msg import LaserScan
 from tf.transformations import euler_from_quaternion
@@ -34,7 +35,9 @@ except (tf.Exception, tf.ConnectivityException, tf.LookupException):
     rospy.loginfo("Cannot find transform between {p} and {c}".format(p=parent_frame, c=child_frame))
     rospy.signal_shutdown("tf Exception")
 
-
+store_theta = [0]
+store_x = [1]
+store_y = [1]
 def get_odom_data():
     """Get the current pose of the robot from the /odom topic
 
@@ -53,68 +56,76 @@ def get_odom_data():
     # return the position (x, y, z) and the yaw
     return Point(*trans), rotation[2]
 
+def go_straight(dist):
+    """Move the robot in a straight line until it has driven a certain distance.
 
-def get_goal():
-    """Get goal arguments from the command line
+    The linear velocity is modified for a Twist message and then published on /cmd_vel.
 
-    The first argument is the x coordinate.
-    The second argument is the y coordinate.
-
-    Return
-    ----------
-    The goal (x, y) to reach.
     """
 
-    x = 0
-    y = 0
-    if len(sys.argv) == 2:
-        coords = int(sys.argv[1])
-        if coords == 0:
-            x = float(-2)
-            y = float(0)
-        elif coords == 1:
-            x = float(-1)
-            y = float(2)
-        elif coords == 2:
-            x = float(1)
-            y = float(2)
-        elif coords == 3:
-            x = float(2)
-            y = float(0)
-        elif coords == 4:
-            x = float(1)
-            y = float(-2)
-        elif coords == 5:
-            x = float(-1)
-            y = float(-2)
-        else:
-            sys.exit('Location submitted is out of range')
-    else:
-        sys.exit('Not enough arguments')
-    return x, y
+    # get distance and linear velocity from command line
+    distance_to_drive, linear_velocity = dist, 0.2
+    global velocity_msg
+    # update linear.x from the command line
+    velocity_msg.linear.x = linear_velocity
+    # get the current time (s)
+    t_0 = rospy.Time.now().to_sec()
+    # keep track of the distance
+    distance_moved = 0.0
+
+    # while the amount of distance has not been reached
+    while distance_moved <= distance_to_drive:
+        rospy.loginfo("TurtleBot is moving")
+        pub.publish(velocity_msg)
+        rate.sleep()
+        # time in sec in the loop
+        t_1 = rospy.Time.now().to_sec()
+        distance_moved = (t_1 - t_0) * abs(linear_velocity)
+        rospy.loginfo("distance moved: {0}".format(distance_moved))
+
+    rospy.loginfo("Distance reached")
+    # finally, stop the robot when the distance is moved
+    velocity_msg.linear.x = 0.0
+    pub.publish(velocity_msg)
 
 
-last_rotation = [0]
+def rotate(theta):
+    """Make the robot rotate in place
 
-print("Please enter all the following values in meters.")
-print()
+    The angular velocity is modified before publishing the message on the topic /cmd_vel.
+    """
 
-start_x = float(input("Enter starting x-coordinate: "))  # user inputs the starting coordinates
-start_y = float(input("Enter starting y-coordinate: "))
-start_theta = float(input("Enter starting theta (the direction the robot is facing): "))
-print("Starting values saved.")
-print()
-goal_x = float(input("Enter finishing x-coordinate: "))  # user inputs the ending coordinates
-goal_y = float(input("Enter finishing y-coordinate: "))
-print("Ending values saved.")
-print()
-RPM1 = float(input("Enter the lower RPM value: "))  # user inputs the wheel RPM values
-RPM2 = float(input("Enter the higher RPM value: "))
-print("RPM values saved.")
-print()
-clearance = float(input("Enter the robot clearnace around walls/obstacles: "))  # user inputs the clearance value
-print("Clearance value saved.")
-print()
+    # angular_velocity = math.radians(angular_velocity)
+    relative_angle_degree, angular_velocity = theta, .2
+    velocity_msg.angular.z = angular_velocity
+
+    t0 = rospy.Time.now().to_sec()
+    while True:
+        rospy.loginfo("TurtleBot is rotating")
+        pub.publish(velocity_msg)
+        rate.sleep()
+        t1 = rospy.Time.now().to_sec()
+        rospy.loginfo("t0: {t}".format(t=t0))
+        rospy.loginfo("t1: {t}".format(t=t1))
+        current_angle_degree = (t1 - t0) * angular_velocity
+
+        rospy.loginfo("current angle: {a}".format(a=current_angle_degree))
+        rospy.loginfo("angle to reach: {a}".format(a=relative_angle_degree))
+        if abs(current_angle_degree) >= math.radians(abs(relative_angle_degree)):
+            # rospy.loginfo("reached")
+            break
+    # finally, stop the robot when the distance is moved
+    velocity_msg.angular.z = 0
+    pub.publish(velocity_msg)
+
+start_x = 1
+start_y = 1
+start_theta = 45
+goal_x = 9
+goal_y = 9
+RPM1 = 15
+RPM2 = 30
+clearance = 0.2
 
 clearance = int(clearance * 100)
 
@@ -246,7 +257,6 @@ path = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 travelled = {}
 travelled = {start_loc: [0, 'Q', start_theta, 0]}  # the dictionary of travelled points
 
-
 def plot_curve(Xi, Yi, Thetai, UL, UR):
     t = 0
     r = 0.038
@@ -268,35 +278,11 @@ def plot_curve(Xi, Yi, Thetai, UL, UR):
     Thetan = 180 * (Thetan) / 3.14
     return Xn, Yn, Thetan, D
 
-
-def plot_curve2(Xi, Yi, Thetai, UL, UR):
-    t = 0
-    r = 0.038
-    L = 0.354
-    dt = 0.1
-    Xn = Xi
-    Yn = Yi
-    Thetan = 3.14 * Thetai / 180
-    D = 0
-    while t < 0.5:
-        t = t + dt
-        Xs = Xn
-        Ys = Yn
-        Xn += 0.5 * r * (UL + UR) * math.cos(Thetan) * dt
-        Yn += 0.5 * r * (UL + UR) * math.sin(Thetan) * dt
-        Thetan += (r / L) * (UR - UL) * dt
-        D = math.sqrt(math.pow((0.5 * r * (UL + UR) * math.cos(Thetan) * dt), 2) + math.pow(
-            (0.5 * r * (UL + UR) * math.sin(Thetan) * dt), 2))
-    Thetan = 180 * (Thetan) / 3.14
-    return Xn, Yn, Thetan, D
-
-
 def checkGoal(x, y):  # function checks if the current node is within the accepted radius of the goal
     if (goal_x - 0.2 <= x <= goal_x + 0.2) and (goal_y - 0.2 <= y <= goal_y + 0.2):
         return True
     else:
         return False
-
 
 current_x = copy.deepcopy(start_x)
 current_y = copy.deepcopy(start_y)
@@ -305,8 +291,11 @@ current_p = travelled[start_loc][1]
 current_theta = travelled[start_loc][2]
 current_ctc = travelled[start_loc][3]
 
+done = 0
 while checkGoal(current_x, current_y) == False:
+#while done < 10:
     i = 0
+    done += 1
     for action in actions:
         p = path[i]
         i += 1
@@ -322,72 +311,34 @@ while checkGoal(current_x, current_y) == False:
             travelled.update(update)
 
     del travelled[start_loc]
-    travelled = {k: v for k, v in sorted(travelled.items(), key=lambda item: item[1])}
-    start_loc = list(travelled.keys())[0]  # updates the next parent node to be the one with the lowest cost
-    current_x = int(start_loc[0:4]) / 100
-    current_y = int(start_loc[4:]) / 100
-    current_cost = list(travelled.values())[0][0]
-    current_p = list(travelled.values())[0][1]
-    current_theta = list(travelled.values())[0][2]
-    current_ctc = list(travelled.values())[0][3]
+    travelled_copy = copy.deepcopy(travelled)
+    travelled_copy = sorted(travelled_copy.items(), key=operator.itemgetter(1))
+
+    #travelled = {k: v for k, v in sorted(travelled.items(), key=lambda item: item[1])}
+    #print(travelled_copy)
+    #start_loc = list(travelled.keys())[0]  # updates the next parent node to be the one with the lowest cost
+    start_loc = travelled_copy[0][0]
+    #print(start_loc)
+    #print(start_loc[0:4])
+    #print(int(start_loc[0:4]))
+    #print(float(float(start_loc[0:4])/100))
+    current_x = float(start_loc[0:4]) / 100
+    current_y = float(start_loc[4:]) / 100
+    #current_cost = list(travelled.values())[0][0]
+    current_cost = travelled_copy[0][1][0]
+    #current_p = list(travelled.values())[0][1]
+    current_p = travelled_copy[0][1][1]
+    #current_theta = list(travelled.values())[0][2]
+    current_theta = travelled_copy[0][1][2]
+    #current_ctc = list(travelled.values())[0][3]
+    current_ctc = travelled_copy[0][1][3]
+    #print(type(travelled))
+    #print(type(travelled_copy))
+    if current_theta != store_theta[-1]:
+        rotate(current_theta)
+    dist = math.sqrt((current_x - store_x[-1])**2 + (current_y - store_y[-1])**2)
+    go_straight(dist)
     print(current_x, current_y)
+    print(current_theta)
+    store_theta.append(current_theta)
 
-path_x = copy.deepcopy(start_x)
-path_y = copy.deepcopy(start_y)
-path_theta = copy.deepcopy(start_theta)
-
-action_sequence = []
-
-for i in current_p:  # shows optimal path by back tracking from first parent node to reach solution
-    if i == 'Q':
-        pass
-    elif i == 'A':
-        X = plot_curve2(path_x, path_y, path_theta, actions[0][0], actions[0][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([RPM1, RPM1])
-    elif i == 'B':
-        X = plot_curve2(path_x, path_y, path_theta, actions[1][0], actions[1][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([RPM1, 0])
-    elif i == 'C':
-        X = plot_curve2(path_x, path_y, path_theta, actions[2][0], actions[2][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([0, RPM1])
-    elif i == 'D':
-        X = plot_curve2(path_x, path_y, path_theta, actions[3][0], actions[3][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([RPM1, RPM2])
-    elif i == 'E':
-        X = plot_curve2(path_x, path_y, path_theta, actions[4][0], actions[4][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([RPM2, RPM1])
-    elif i == 'F':
-        X = plot_curve2(path_x, path_y, path_theta, actions[5][0], actions[5][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([RPM2, RPM2])
-    elif i == 'G':
-        X = plot_curve2(path_x, path_y, path_theta, actions[6][0], actions[6][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([0, RPM2])
-    elif i == 'H':
-        X = plot_curve2(path_x, path_y, path_theta, actions[7][0], actions[7][1])
-        path_x = round(X[0], 2)
-        path_y = round(X[1], 2)
-        path_theta = X[2]
-        action_sequence.append([RPM2, 0])
-
-print(action_sequence)
