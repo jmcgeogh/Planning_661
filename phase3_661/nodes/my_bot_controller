@@ -75,42 +75,42 @@ def go_straight(dist):
 
     # while the amount of distance has not been reached
     while distance_moved <= distance_to_drive:
-        rospy.loginfo("TurtleBot is moving")
+        #rospy.loginfo("TurtleBot is moving")
         pub.publish(velocity_msg)
         rate.sleep()
         # time in sec in the loop
         t_1 = rospy.Time.now().to_sec()
         distance_moved = (t_1 - t_0) * abs(linear_velocity)
-        rospy.loginfo("distance moved: {0}".format(distance_moved))
+        #rospy.loginfo("distance moved: {0}".format(distance_moved))
 
-    rospy.loginfo("Distance reached")
+    #rospy.loginfo("Distance reached")
     # finally, stop the robot when the distance is moved
     velocity_msg.linear.x = 0.0
     pub.publish(velocity_msg)
 
 
-def rotate(theta):
+def rotate(theta, vel):
     """Make the robot rotate in place
 
     The angular velocity is modified before publishing the message on the topic /cmd_vel.
     """
 
     # angular_velocity = math.radians(angular_velocity)
-    relative_angle_degree, angular_velocity = theta, .2
+    relative_angle_degree, angular_velocity = theta, vel
     velocity_msg.angular.z = angular_velocity
 
     t0 = rospy.Time.now().to_sec()
     while True:
-        rospy.loginfo("TurtleBot is rotating")
+        #rospy.loginfo("TurtleBot is rotating")
         pub.publish(velocity_msg)
         rate.sleep()
         t1 = rospy.Time.now().to_sec()
-        rospy.loginfo("t0: {t}".format(t=t0))
-        rospy.loginfo("t1: {t}".format(t=t1))
+        #rospy.loginfo("t0: {t}".format(t=t0))
+        #rospy.loginfo("t1: {t}".format(t=t1))
         current_angle_degree = (t1 - t0) * angular_velocity
 
-        rospy.loginfo("current angle: {a}".format(a=current_angle_degree))
-        rospy.loginfo("angle to reach: {a}".format(a=relative_angle_degree))
+        #rospy.loginfo("current angle: {a}".format(a=current_angle_degree))
+        #rospy.loginfo("angle to reach: {a}".format(a=relative_angle_degree))
         if abs(current_angle_degree) >= math.radians(abs(relative_angle_degree)):
             # rospy.loginfo("reached")
             break
@@ -118,13 +118,75 @@ def rotate(theta):
     velocity_msg.angular.z = 0
     pub.publish(velocity_msg)
 
+def go_to_goal(goal_x, goal_y):
+    """Task the robot to reach a goal (x,y) using a proportional controller.
+
+    The current pose of the robot is retrieved from /odom topic.
+    Publish the message to /cmd_vel topic.
+
+
+    """
+
+    # get current pose of the robot from the /odom topic
+    (position, rotation) = get_odom_data()
+    last_rotation = 0
+    # get the goal to reach from arguments passed to the command line
+    goal_x = goal_x - 5
+    goal_y = goal_y - 5
+    # compute the distance from the current position to the goal
+    distance_to_goal = computation.compute_distance(position.x, position.y, goal_x, goal_y)
+
+    while distance_to_goal > 0.05:
+        (position, rotation) = get_odom_data()
+        x_start = position.x
+        y_start = position.y
+        rospy.loginfo("x = {0}, y = {1}".format(x_start, y_start))
+        angle_to_goal = math.atan2(goal_y - y_start, goal_x - x_start)
+
+        # the domain of arctan(x) is (-inf, inf)
+        # we would like to restrict the domain to (0, 2pi)
+        if angle_to_goal < -math.pi/4 or angle_to_goal > math.pi/4:
+            if 0 > goal_y > y_start:
+                angle_to_goal = -2 * math.pi + angle_to_goal
+            elif 0 <= goal_y < y_start:
+                angle_to_goal = 2 * math.pi + angle_to_goal
+        if last_rotation > math.pi - 0.1 and rotation <= 0:
+            rotation = 2 * math.pi + rotation
+        elif last_rotation < -math.pi + 0.1 and rotation > 0:
+            rotation = -2 * math.pi + rotation
+
+        # proportional control for rotating the robot
+        velocity_msg.angular.z = k_v_gain * angle_to_goal-rotation
+        distance_to_goal = computation.compute_distance(position.x, position.y, goal_x, goal_y)
+        # proportional control to move the robot forward
+        # We will drive the robot at a maximum speed of 0.5
+        if -.07 <= velocity_msg.angular.z <= .07:
+            velocity_msg.linear.x = min(k_h_gain * distance_to_goal, 0.15)
+
+        # set the z angular velocity for positive and negative rotations
+        if velocity_msg.angular.z > 0:
+            velocity_msg.angular.z = min(velocity_msg.angular.z, .2)
+        else:
+            velocity_msg.angular.z = max(velocity_msg.angular.z, -.2)
+
+        # update the new rotation for the next loop
+        last_rotation = rotation
+        pub.publish(velocity_msg)
+        rate.sleep()
+
+    # force the robot to stop by setting linear and angular velocities to 0
+    velocity_msg.linear.x = 0.0
+    velocity_msg.angular.z = 0.0
+    # publish the new message on /cmd_vel topic
+    pub.publish(velocity_msg)
+
 start_x = 1
 start_y = 1
-start_theta = 45
+start_theta = 0
 goal_x = 9
 goal_y = 9
-RPM1 = 15
-RPM2 = 30
+RPM1 = 10
+RPM2 = 20
 clearance = 0.2
 
 clearance = int(clearance * 100)
@@ -293,7 +355,7 @@ current_ctc = travelled[start_loc][3]
 
 done = 0
 while checkGoal(current_x, current_y) == False:
-#while done < 10:
+#while done < 3:
     i = 0
     done += 1
     for action in actions:
@@ -334,11 +396,41 @@ while checkGoal(current_x, current_y) == False:
     current_ctc = travelled_copy[0][1][3]
     #print(type(travelled))
     #print(type(travelled_copy))
-    if current_theta != store_theta[-1]:
-        rotate(current_theta)
-    dist = math.sqrt((current_x - store_x[-1])**2 + (current_y - store_y[-1])**2)
-    go_straight(dist)
     print(current_x, current_y)
-    print(current_theta)
-    store_theta.append(current_theta)
+    go_to_goal(current_x, current_y)
+    #print(current_theta)
+    #if (store_x[-1] - current_x) != 0:
+    #    calc_theta = (math.atan((store_y[-1]-current_y)/(store_x[-1]-current_x))*180)/3.14
+    #else:
+    #    calc_theta = 0
+    #print(calc_theta)
+    #new_theta = calc_theta - store_theta[-1]
+    #print(new_theta)
+    #if calc_theta == 0:
+    #    if new_theta < 0:
+    #        rotate(abs(new_theta), -.2)
+    #    else:
+    #        rotate(abs(new_theta), .2)
+        #if current_x > store_x[-1]:
+        #    if calc_theta < 0:
+        #        rotate(abs(calc_theta + store_theta[-1]), -.2)
+        #    else:
+        #        rotate(abs(calc_theta + store_theta[-1]), .2)
+        #else:
+        #    if calc_theta > 0:
+        #        rotate(abs(calc_theta + store_theta[-1]), -.2)
+        #    else:
+        #        rotate(abs(calc_theta + store_theta[-1]), .2)
+
+    #if current_theta != store_theta[-1]:
+    #    if current_theta < 0:
+    #        rotate(abs(current_theta), -.2)
+    #    else:
+    #        rotate(current_theta, .2)
+    #dist = math.sqrt((current_x - store_x[-1])**2 + (current_y - store_y[-1])**2)
+    #go_straight(abs(dist))
+    #print(abs(dist))
+    # store_theta.append(new_theta)
+    #store_x.append(current_x)
+    #store_y.append(current_y)
 
