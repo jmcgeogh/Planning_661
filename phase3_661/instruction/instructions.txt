@@ -1,14 +1,12 @@
-This file provides the instructions to run the rwa2_mcgeoghegan package for the RWA 2 assignment
+This instructions file will describe how to set up the gazebo enviorment and run the code to move the turtlebot
 
-1) Place the rwa2_mcgeoghegan in the src folder of your catkin workspace, the package has already been built with catkin build
-2) Navigate back to your workspace directory and run $ source devel/setup.bash
-3) If you do not have it written in your .bashrc file, run $ export TURTLEBOT3_MODEL=waffle
-4) Launch ROS Master with the command $ roscore
-5) Open a new terminal and navigate to your workspace
-6) We will now launch the gazebo file for the assignment. Run $ roslaunch rwa2_mcgeoghegan rwa2.launch 
-7) Once the gazebo map has loaded in open a new termianl and navigaate to your catkin workspace
-8) Repeat step 3 in the new terminal
-9) In your workspace run $ rosrun rwa2_mcgeoghegan my_bot_controller <x>, where <x> is the location you wish the robot to visit (0-5)
-10) The waffle robot will traverse the map from its current location to the point specified in step 7
-11) Once the goal has been reached the program will exit
-12) Return to step 7 to have the robot travel to a new location
+1) If you have not done so already add the following line to your .bashrc or run it in each terminal you open
+	export TURTLEBOT3_MODEL=waffle
+2) Navigate to the catkin workspace that you have moved this package to
+3) Run $ catkin clean and $ catkin build if necessary
+4) If you did step three then run $ source devel/setup.bash while still in the workspace
+5) To launch the simulation run $ roslaunch phase3_661 world.launch
+6) Once the simulation has started, open a new terminal and run $ rosrun phase3_661 my_bot_controller
+7) The next coordinates to be traveled will be published in the terminal as the robot moves to the goal
+8) Once the goal has been reached 'Goal Reached!' will be published in the terminal and the program will close
+9) To run the simulation again click on the gazebo simulation and press CTRL+R and return to step 6
