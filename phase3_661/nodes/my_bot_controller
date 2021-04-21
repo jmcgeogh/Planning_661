@@ -26,15 +26,14 @@ parent_frame = 'odom'
 # child frame for the listener
 child_frame = 'base_footprint'
 
+#####Robot Motion#####
+# Ensure the transform between the robot and world can be read
 try:
     tf_listener.waitForTransform(parent_frame, child_frame, rospy.Time(), rospy.Duration(1.0))
 except (tf.Exception, tf.ConnectivityException, tf.LookupException):
     rospy.loginfo("Cannot find transform between {p} and {c}".format(p=parent_frame, c=child_frame))
     rospy.signal_shutdown("tf Exception")
 
-store_theta = [0]
-store_x = [1]
-store_y = [1]
 # Get the current position and orientation from the /odom topic
 def odom():
     try:
@@ -102,6 +101,14 @@ def move(goal_x, goal_y):
     # publish the new message on /cmd_vel topic
     pub.publish(velocity_msg)
 
+#####A* Algorithm#####
+
+# Storage lists
+store_theta = [0]
+store_x = [1]
+store_y = [1]
+
+# Starting parameters for the A* algorithm
 start_x = 1
 start_y = 1
 start_theta = 0
@@ -110,9 +117,9 @@ goal_y = 9
 RPM1 = 10
 RPM2 = 20
 clearance = 0.2
-
 clearance = int(clearance * 100)
 
+# Convert coordinates to a string
 def CoordToString(x, y):
     if x // 10 < 1:  # lists location as a string with 8 integers (x and y coords) (00000000 to 10001000)
         stringx = '000'
@@ -134,7 +141,7 @@ def CoordToString(x, y):
 
 
 obstacles = []
-
+# Create obstacles
 for i in range(0, clearance + 1):  # left boundary
     for j in range(0, 1001):
         x = i
@@ -219,6 +226,7 @@ start_loc = str(startx + str(int(start_x * 100)) + starty + str(int(start_y * 10
 goalx, goaly = CoordToString(int(goal_x * 100), int(goal_y * 100))
 goal_loc = str(goalx + str(int(goal_x * 100)) + goaly + str(int(goal_y * 100)))
 
+# Ensure the starting and ending location are not in objects
 if start_loc in obstacles:  # checks that are the inputs are valid
     print("Starting coordinates are either in obstacle or too close to obstacle/boundary. Please try again.")
     sys.exit()
@@ -241,6 +249,7 @@ path = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 travelled = {}
 travelled = {start_loc: [0, 'Q', start_theta, 0]}  # the dictionary of travelled points
 
+# Calculate next x and y locations
 def plot_curve(Xi, Yi, Thetai, UL, UR):
     t = 0
     r = 0.038
@@ -275,6 +284,7 @@ current_p = travelled[start_loc][1]
 current_theta = travelled[start_loc][2]
 current_ctc = travelled[start_loc][3]
 
+# A* algo loop
 done = 0
 while checkGoal(current_x, current_y) == False:
     i = 0
