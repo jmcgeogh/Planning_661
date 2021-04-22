@@ -1,1 +1,1 @@
-from computation import generate_random
+from computation import compute_distance
